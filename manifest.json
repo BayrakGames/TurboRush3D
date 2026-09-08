@@ -1,0 +1,17 @@
+{
+  "name": "TurboRush3D",
+  "short_name": "TurboRush",
+  "description": "Basit bir tarayıcı içi yarış kaçma oyunu",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1c1c1a",
+  "theme_color": "#1D9E75",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
