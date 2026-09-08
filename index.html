@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Yarış Kaç</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #1c1c1a;
+    color: #f1efe8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 420px;
+  }
+  .stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .stat-group {
+    display: flex;
+    gap: 8px;
+  }
+  .stat {
+    background: #2c2c2a;
+    border-radius: 10px;
+    padding: 8px 14px;
+    text-align: center;
+  }
+  .stat .label {
+    font-size: 11px;
+    color: #b4b2a9;
+  }
+  .stat .value {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  button {
+    background: #2c2c2a;
+    color: #f1efe8;
+    border: 1px solid #444441;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:active { transform: scale(0.97); }
+  #track {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    background: #3a3a38;
+    border-radius: 12px;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #lanes {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+  #lanes > div {
+    flex: 1;
+    border-right: 3px dashed rgba(255,255,255,0.25);
+  }
+  #lanes > div:last-child { border-right: none; }
+  #player {
+    position: absolute;
+    width: 44px;
+    height: 70px;
+    background: #1D9E75;
+    border-radius: 8px;
+    bottom: 16px;
+    transition: left 0.12s ease;
+  }
+  #msg {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 14px;
+    color: #b4b2a9;
+    min-height: 18px;
+  }
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 12px;
+  }
+  .controls button {
+    width: 64px;
+    height: 48px;
+    font-size: 22px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Yarış Kaç</h1>
+  <div class="stats">
+    <div class="stat-group">
+      <div class="stat">
+        <div class="label">Mesafe</div>
+        <div class="value" id="score">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">En iyi</div>
+        <div class="value" id="best">0</div>
+      </div>
+    </div>
+    <button id="restart">↻ Başlat</button>
+  </div>
+
+  <div id="track">
+    <div id="lanes">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+    <div id="player"></div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="controls">
+    <button id="leftBtn" aria-label="Sola git">←</button>
+    <button id="rightBtn" aria-label="Sağa git">→</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const track = document.getElementById('track');
+  const player = document.getElementById('player');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const msgEl = document.getElementById('msg');
+  const restartBtn = document.getElementById('restart');
+  const leftBtn = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+
+  const LANES = 3;
+  const carColors = ['#D85A30','#378ADD','#D4537E','#EF9F27'];
+
+  let lane, score, best = 0, running, obstacles, tickTimer, spawnTimer, speed;
+
+  function laneWidth(){ return track.clientWidth / LANES; }
+  function laneX(l){ return l * laneWidth() + (laneWidth() - 44) / 2; }
+
+  function setup(){
+    lane = 1;
+    score = 0;
+    running = true;
+    obstacles = [];
+    speed = 3.2;
+    msgEl.textContent = '';
+    player.style.left = laneX(lane) + 'px';
+    document.querySelectorAll('.obs').forEach(o => o.remove());
+    scoreEl.textContent = '0';
+  }
+
+  function moveLane(d){
+    if(!running) return;
+    lane = Math.max(0, Math.min(LANES - 1, lane + d));
+    player.style.left = laneX(lane) + 'px';
+  }
+
+  function spawnObstacle(){
+    if(!running) return;
+    const l = Math.floor(Math.random() * LANES);
+    const el = document.createElement('div');
+    el.className = 'obs';
+    const color = carColors[Math.floor(Math.random()*carColors.length)];
+    el.style.cssText = 'position:absolute; width:44px; height:70px; border-radius:8px; top:-80px; background:' + color + ';';
+    el.style.left = laneX(l) + 'px';
+    el.dataset.lane = l;
+    el.dataset.y = -80;
+    track.appendChild(el);
+    obstacles.push(el);
+  }
+
+  function tick(){
+    if(!running) return;
+    score += 1;
+    scoreEl.textContent = Math.floor(score / 5);
+    const trackH = track.clientHeight;
+    const playerRect = { top: trackH - 16 - 70, bottom: trackH - 16 };
+
+    obstacles.forEach(el => {
+      let y = parseFloat(el.dataset.y) + speed;
+      el.dataset.y = y;
+      el.style.top = y + 'px';
+      const l = parseInt(el.dataset.lane);
+      if(l === lane && y + 70 > playerRect.top && y < playerRect.bottom){
+        endGame();
+      }
+    });
+    obstacles = obstacles.filter(el => {
+      if(parseFloat(el.dataset.y) > trackH){ el.remove(); return false; }
+      return true;
+    });
+    speed = Math.min(9, speed + 0.0015);
+  }
+
+  function endGame(){
+    running = false;
+    const dist = Math.floor(score / 5);
+    if(dist > best){ best = dist; bestEl.textContent = best; }
+    msgEl.textContent = 'Çarpıştın! Mesafe: ' + dist;
+  }
+
+  function startLoop(){
+    clearInterval(tickTimer);
+    clearInterval(spawnTimer);
+    tickTimer = setInterval(tick, 30);
+    spawnTimer = setInterval(spawnObstacle, 700);
+  }
+
+  restartBtn.addEventListener('click', () => { setup(); startLoop(); });
+  leftBtn.addEventListener('click', () => moveLane(-1));
+  rightBtn.addEventListener('click', () => moveLane(1));
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowLeft'){ e.preventDefault(); moveLane(-1); }
+    if(e.key === 'ArrowRight'){ e.preventDefault(); moveLane(1); }
+  });
+
+  let startX;
+  track.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, {passive:true});
+  track.addEventListener('touchend', (e) => {
+    if(startX === undefined) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if(Math.abs(dx) > 25) moveLane(dx > 0 ? 1 : -1);
+    startX = undefined;
+  }, {passive:true});
+
+  window.addEventListener('resize', () => { player.style.left = laneX(lane) + 'px'; });
+
+  setup();
+  startLoop();
+})();
+</script>
+</body>
+</html>
